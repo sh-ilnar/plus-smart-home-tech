@@ -30,7 +30,13 @@ public class EventServiceImpl implements EventService{
         String topic = eventTopics.getSensorEventsTopic();
 
         ProducerRecord<Void, SpecificRecordBase> record =
-                new ProducerRecord<>(topic, null, avroSensorEvent);
+                new ProducerRecord<>(
+                        topic,
+                        null,
+                        sensorEvent.getTimestamp().toEpochMilli(),
+                        null,
+                        avroSensorEvent
+                );
         kafkaProducer.send(record);
 
         log.info("Отправлено: {}", avroSensorEvent);
@@ -44,7 +50,13 @@ public class EventServiceImpl implements EventService{
         String topic = eventTopics.getHubEventsTopic();
 
         ProducerRecord<Void, SpecificRecordBase> record =
-                new ProducerRecord<>(topic, null, avroHubEvent);
+                new ProducerRecord<>(
+                        topic,
+                        null,
+                        hubEvent.getTimestamp().toEpochMilli(),
+                        null,
+                        avroHubEvent
+                );
         kafkaProducer.send(record);
 
         log.info("Отправлено: {}", avroHubEvent);

@@ -18,6 +18,8 @@ public class KafkaConfig {
     @Value("${plus-smart-home-tech.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    private KafkaProducer<Void, SpecificRecordBase> kafkaProducer;
+
     @Bean
     public KafkaProducer<Void, SpecificRecordBase> kafkaProducer() {
         Properties properties = new Properties();
@@ -25,5 +27,13 @@ public class KafkaConfig {
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "ru.yandex.practicum.telemetry.collector.configuration.GeneralAvroSerializer");
         return new KafkaProducer<>(properties);
+    }
+
+    @PreDestroy
+    public void closeProducer() {
+        if (kafkaProducer != null) {
+            kafkaProducer.flush();
+            kafkaProducer.close(Duration.ofSeconds(10));
+        }
     }
 }
