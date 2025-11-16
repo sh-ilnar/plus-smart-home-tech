@@ -1,18 +1,20 @@
 package ru.yandex.practicum.telemetry.collector.mapper;
 
 import org.apache.avro.specific.SpecificRecordBase;
+import ru.yandex.practicum.grpc.telemetry.event.*;
 import ru.yandex.practicum.kafka.telemetry.event.*;
-import ru.yandex.practicum.telemetry.collector.model.*;
+
+import java.time.Instant;
 
 public class SensorEventMapper {
 
-    public static SpecificRecordBase mapToAvro(SensorEvent event) {
-        SpecificRecordBase payload = switch (event) {
-            case ClimateSensorEvent ev -> mapToAvro(ev);
-            case LightSensorEvent ev -> mapToAvro(ev);
-            case MotionSensorEvent ev -> mapToAvro(ev);
-            case SwitchSensorEvent ev -> mapToAvro(ev);
-            case TemperatureSensorEvent ev -> mapToAvro(ev);
+    public static SpecificRecordBase mapToAvro(SensorEventProto event) {
+        SpecificRecordBase payload = switch (event.getPayloadCase()) {
+            case CLIMATE_SENSOR -> mapToAvro(event.getClimateSensor());
+            case LIGHT_SENSOR -> mapToAvro(event.getLightSensor());
+            case MOTION_SENSOR -> mapToAvro(event.getMotionSensor());
+            case SWITCH_SENSOR -> mapToAvro(event.getSwitchSensor());
+            case TEMPERATURE_SENSOR -> mapToAvro(event.getTemperatureSensor());
             default ->
                     throw new IllegalArgumentException("Неподдерживаемый тип SensorEvent: " + event.getClass().getName());
         };
@@ -20,12 +22,16 @@ public class SensorEventMapper {
         return SensorEventAvro.newBuilder()
                 .setId(event.getId())
                 .setHubId(event.getHubId())
-                .setTimestamp(event.getTimestamp())
+                .setTimestamp(
+                        Instant.ofEpochSecond(
+                                event.getTimestamp().getSeconds(),
+                                event.getTimestamp().getNanos()
+                        ))
                 .setPayload(payload)
                 .build();
     }
 
-    public static ClimateSensorAvro mapToAvro(ClimateSensorEvent event) {
+    public static ClimateSensorAvro mapToAvro(ClimateSensorProto event) {
         return ClimateSensorAvro.newBuilder()
                 .setTemperatureC(event.getTemperatureC())
                 .setHumidity(event.getHumidity())
@@ -33,28 +39,28 @@ public class SensorEventMapper {
                 .build();
     }
 
-    public static LightSensorAvro mapToAvro(LightSensorEvent event) {
+    public static LightSensorAvro mapToAvro(LightSensorProto event) {
         return LightSensorAvro.newBuilder()
                 .setLinkQuality(event.getLinkQuality())
                 .setLuminosity(event.getLuminosity())
                 .build();
     }
 
-    public static MotionSensorAvro mapToAvro(MotionSensorEvent event) {
+    public static MotionSensorAvro mapToAvro(MotionSensorProto event) {
         return MotionSensorAvro.newBuilder()
                 .setLinkQuality(event.getLinkQuality())
-                .setMotion(event.isMotion())
+                .setMotion(event.getMotion())
                 .setVoltage(event.getVoltage())
                 .build();
     }
 
-    public static SwitchSensorAvro mapToAvro(SwitchSensorEvent event) {
+    public static SwitchSensorAvro mapToAvro(SwitchSensorProto event) {
         return SwitchSensorAvro.newBuilder()
-                .setState(event.isState())
+                .setState(event.getState())
                 .build();
     }
 
-    public static TemperatureSensorAvro mapToAvro(TemperatureSensorEvent event) {
+    public static TemperatureSensorAvro mapToAvro(TemperatureSensorProto event) {
         return TemperatureSensorAvro.newBuilder()
                 .setTemperatureC(event.getTemperatureC())
                 .setTemperatureF(event.getTemperatureF())
