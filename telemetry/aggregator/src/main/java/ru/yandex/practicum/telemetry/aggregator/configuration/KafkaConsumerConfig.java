@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
 import ru.yandex.practicum.deserializer.SensorEventDeserializer;
 import ru.yandex.practicum.kafka.telemetry.event.SensorEventAvro;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;

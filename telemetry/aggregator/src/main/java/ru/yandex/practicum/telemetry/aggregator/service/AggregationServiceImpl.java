@@ -2,7 +2,6 @@ package ru.yandex.practicum.telemetry.aggregator.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.quota.ClientQuotaAlteration;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.kafka.telemetry.event.SensorEventAvro;
 import ru.yandex.practicum.kafka.telemetry.event.SensorStateAvro;
@@ -30,20 +29,21 @@ public class AggregationServiceImpl implements AggregationService {
 
         if (!snapshots.containsKey(hubId)) {
             snapshot = createSnapshot(event);
+            snapshots.put(hubId, snapshot);
             return Optional.of(snapshot);
         }
 
         snapshot = snapshots.get(hubId);
         Map<String, SensorStateAvro> states = snapshot.getSensorsState();
+        String eventId = event.getId();
 
-        if (states.containsKey(event.getId())) {
-            SensorStateAvro oldState = states.get(event.getId());
+        if (states.containsKey(eventId)) {
+            SensorStateAvro oldState = states.get(eventId);
 
             if (Objects.equals(oldState.getData(), event.getPayload())
                     || (oldState.getTimestamp().isAfter(event.getTimestamp()))) {
                 return Optional.empty();
             }
-
         }
 
         SensorStateAvro newState = SensorStateAvro.newBuilder()
@@ -51,17 +51,27 @@ public class AggregationServiceImpl implements AggregationService {
                 .setData(event.getPayload())
                 .build();
 
-        snapshot.getSensorsState().put(event.getId(), newState);
-        snapshots.put(event.getHubId(), snapshot);
+        states.put(eventId, newState);
+        snapshots.put(hubId, snapshot);
 
         return Optional.of(snapshot);
     }
 
     private SensorsSnapshotAvro createSnapshot(SensorEventAvro event) {
+
+        Map<String, SensorStateAvro> states = new HashMap<>();
+
+        SensorStateAvro newState = SensorStateAvro.newBuilder()
+                .setTimestamp(event.getTimestamp())
+                .setData(event.getPayload())
+                .build();
+
+        states.put(event.getId(), newState);
+
         return SensorsSnapshotAvro.newBuilder()
                 .setHubId(event.getHubId())
                 .setTimestamp(event.getTimestamp())
-                .setSensorsState(new HashMap<>())
+                .setSensorsState(states)
                 .build();
     }
 }

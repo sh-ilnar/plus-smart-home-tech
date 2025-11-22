@@ -24,7 +24,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AggregationStarter {
 
-    // ... объявление полей и конструктора ...
     private final Consumer<Void, SensorEventAvro> consumer;
     private final Producer<Void, SpecificRecordBase> producer;
     private final AggregationService aggregationService;
@@ -65,7 +64,6 @@ public class AggregationStarter {
                         producer.send(producerRecord);
                     }
                 }
-
                 consumer.commitAsync();
             }
         } catch (WakeupException ignored) {
