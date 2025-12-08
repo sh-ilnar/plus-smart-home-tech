@@ -4,6 +4,7 @@ import com.google.protobuf.Timestamp;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.grpc.telemetry.event.ActionTypeProto;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionProto;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionRequest;
@@ -31,6 +32,7 @@ public class SnapshotHandler {
         this.scenarioService = scenarioService;
     }
 
+    @Transactional
     public void handleSnapshot(SensorsSnapshotAvro snapshot) {
         String hubId = snapshot.getHubId();
 

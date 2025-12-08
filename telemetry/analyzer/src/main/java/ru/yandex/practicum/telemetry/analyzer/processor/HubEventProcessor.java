@@ -33,10 +33,23 @@ public class HubEventProcessor implements Runnable {
             while(true) {
                 ConsumerRecords<Void, HubEventAvro> records = consumer.poll(CONSUME_ATTEMPT_TIMEOUT);
 
-                for (ConsumerRecord<Void, HubEventAvro> record : records) {
-                    handler.handleHubEvent(record.value());
+                log.debug("Получаю {} записей.", records.count());
+
+                records.forEach(record -> {
+                    try {
+                        handler.handleHubEvent(record.value());
+                    } catch (Exception e) {
+                        log.error("Ошибка при обработке записи из Topic: {}, Partition: {}, Offset: {}",
+                                record.topic(), record.partition(), record.offset(), e);
+                    }
+                });
+
+                try {
+                    consumer.commitSync();
+                    log.trace("Offset зафиксированы.");
+                } catch (Exception e) {
+                    log.error("Ошибка при фиксации Offset", e);
                 }
-                consumer.commitAsync();
             }
         } catch (WakeupException ignored) {
 
