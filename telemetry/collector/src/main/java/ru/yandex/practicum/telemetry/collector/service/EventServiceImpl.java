@@ -5,12 +5,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
 import ru.yandex.practicum.grpc.telemetry.event.SensorEventProto;
 import ru.yandex.practicum.telemetry.collector.configuration.EventTopics;
 import ru.yandex.practicum.telemetry.collector.mapper.HubEventMapper;
 import ru.yandex.practicum.telemetry.collector.mapper.SensorEventMapper;
+
+import java.util.concurrent.Future;
 
 @Service
 @RequiredArgsConstructor
@@ -51,7 +54,19 @@ public class EventServiceImpl implements EventService{
                         topic,
                         avroHubEvent
                 );
-        kafkaProducer.send(record);
+
+
+
+        kafkaProducer.send(record, (metadata, exception) -> {
+            if (exception == null) {
+                log.info("Сообщение отправлено. Topic: {}, Partition: {}, Offset: {}",
+                        metadata.topic(),
+                        metadata.partition(),
+                        metadata.offset());
+            } else {
+                log.error("Ошибка отправки в Kafka", exception);
+            }
+        });
 
         log.info("Отправлено: {}", avroHubEvent);
     }

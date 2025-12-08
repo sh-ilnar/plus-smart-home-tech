@@ -12,29 +12,30 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public class GeneralAvroSerializer implements Serializer<SpecificRecordBase> {
-    private final EncoderFactory encoderFactory = EncoderFactory.get();
+    private final EncoderFactory encoderFactory;
+    private BinaryEncoder encoder;
 
-    @Override
+    public GeneralAvroSerializer() {
+        this(EncoderFactory.get());
+    }
+
+    public GeneralAvroSerializer(EncoderFactory encoderFactory) {
+        this.encoderFactory = encoderFactory;
+    }
+
     public byte[] serialize(String topic, SpecificRecordBase data) {
-        if(data == null) {
-            return null;
-        }
-
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-
-            BinaryEncoder encoder = encoderFactory.binaryEncoder(outputStream, null);
-            DatumWriter<SpecificRecordBase> datumWriter = new SpecificDatumWriter<>(data.getSchema());
-
-            // сериализуем данные
-            datumWriter.write(data, encoder);
-
-            // сбрасываем все данные из буфера в поток
-            encoder.flush();
-            // возвращаем сериализованные данные
-            return outputStream.toByteArray();
-
-        } catch (IOException e) {
-            throw new SerializationException("Ошибка сериализации " + topic, e);
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] result = null;
+            encoder = encoderFactory.binaryEncoder(out, encoder);
+            if (data != null) {
+                DatumWriter<SpecificRecordBase> writer = new SpecificDatumWriter<>(data.getSchema());
+                writer.write(data, encoder);
+                encoder.flush();
+                result = out.toByteArray();
+            }
+            return result;
+        } catch (IOException ex) {
+            throw new SerializationException("Ошибка сериализации данных для топика [" + topic + "]", ex);
         }
     }
 }
