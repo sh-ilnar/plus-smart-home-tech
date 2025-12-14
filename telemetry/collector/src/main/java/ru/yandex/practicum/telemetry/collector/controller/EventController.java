@@ -1,29 +1,51 @@
 package ru.yandex.practicum.telemetry.collector.controller;
 
-import jakarta.validation.Valid;
+import com.google.protobuf.Empty;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.validation.annotation.Validated;
-import ru.yandex.practicum.telemetry.collector.model.*;
-import org.springframework.web.bind.annotation.*;
+import net.devh.boot.grpc.server.service.GrpcService;
+import ru.yandex.practicum.grpc.telemetry.collector.CollectorControllerGrpc;
+import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
+import ru.yandex.practicum.grpc.telemetry.event.SensorEventProto;
 import ru.yandex.practicum.telemetry.collector.service.EventService;
 
-@RestController
-@RequestMapping("/events")
-@Slf4j
+@GrpcService
 @RequiredArgsConstructor
-@Validated
-public class EventController {
+public class EventController extends CollectorControllerGrpc.CollectorControllerImplBase {
 
     private final EventService eventService;
 
-    @PostMapping("/sensors")
-    public void postSensors(@Valid @RequestBody SensorEvent sensorEvent) {
-        eventService.handleSensorEvent(sensorEvent);
+    @Override
+    public void collectSensorEvent(SensorEventProto request, StreamObserver<Empty> responseObserver) {
+        try {
+            eventService.handleSensorEvent(request);
+
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(new StatusRuntimeException(
+                    Status.INTERNAL
+                            .withDescription(e.getLocalizedMessage())
+                            .withCause(e)
+            ));
+        }
     }
 
-    @PostMapping("/hubs")
-    public void postHubs(@Valid @RequestBody HubEvent hubEvent) {
-        eventService.handleHubEvent(hubEvent);
+    @Override
+    public void collectHubEvent(HubEventProto request, StreamObserver<Empty> responseObserver) {
+        try {
+            eventService.handleHubEvent(request);
+
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(new StatusRuntimeException(
+                    Status.INTERNAL
+                            .withDescription(e.getLocalizedMessage())
+                            .withCause(e)
+            ));
+        }
     }
 }

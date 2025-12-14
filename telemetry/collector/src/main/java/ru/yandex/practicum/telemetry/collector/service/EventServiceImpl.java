@@ -5,12 +5,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
+import ru.yandex.practicum.grpc.telemetry.event.SensorEventProto;
 import ru.yandex.practicum.telemetry.collector.configuration.EventTopics;
 import ru.yandex.practicum.telemetry.collector.mapper.HubEventMapper;
 import ru.yandex.practicum.telemetry.collector.mapper.SensorEventMapper;
-import ru.yandex.practicum.telemetry.collector.model.HubEvent;
-import ru.yandex.practicum.telemetry.collector.model.SensorEvent;
+
+import java.util.concurrent.Future;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +25,7 @@ public class EventServiceImpl implements EventService{
     private final EventTopics eventTopics;
 
     @Override
-    public void handleSensorEvent(SensorEvent sensorEvent) {
+    public void handleSensorEvent(SensorEventProto sensorEvent) {
 
         log.info("Получено: {}", sensorEvent);
 
@@ -32,9 +35,6 @@ public class EventServiceImpl implements EventService{
         ProducerRecord<Void, SpecificRecordBase> record =
                 new ProducerRecord<>(
                         topic,
-                        null,
-                        sensorEvent.getTimestamp().toEpochMilli(),
-                        null,
                         avroSensorEvent
                 );
         kafkaProducer.send(record);
@@ -43,7 +43,7 @@ public class EventServiceImpl implements EventService{
     }
 
     @Override
-    public void handleHubEvent(HubEvent hubEvent) {
+    public void handleHubEvent(HubEventProto hubEvent) {
         log.info("Получено: {}", hubEvent);
 
         SpecificRecordBase avroHubEvent = HubEventMapper.mapToAvro(hubEvent);
@@ -52,12 +52,21 @@ public class EventServiceImpl implements EventService{
         ProducerRecord<Void, SpecificRecordBase> record =
                 new ProducerRecord<>(
                         topic,
-                        null,
-                        hubEvent.getTimestamp().toEpochMilli(),
-                        null,
                         avroHubEvent
                 );
-        kafkaProducer.send(record);
+
+
+
+        kafkaProducer.send(record, (metadata, exception) -> {
+            if (exception == null) {
+                log.info("Сообщение отправлено. Topic: {}, Partition: {}, Offset: {}",
+                        metadata.topic(),
+                        metadata.partition(),
+                        metadata.offset());
+            } else {
+                log.error("Ошибка отправки в Kafka", exception);
+            }
+        });
 
         log.info("Отправлено: {}", avroHubEvent);
     }
